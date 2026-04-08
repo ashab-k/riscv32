@@ -1,0 +1,17 @@
+
+
+#include "decode.h"
+#include "dispatch.h"
+#include "riscv.h"
+
+#define OP_IMM 0x04 // 0x13
+#define OP       0x0C   // 0x33
+#define OP_LUI   0x0D   // 0x37
+#define OP_AUIPC 0x05   // 0x17
+#define OP_JAL   0x1B   // 0x6F
+#define OP_JALR  0x19   // 0x67
+#define OP_BR    0x18   // 0x63
+#define OP_LOAD  0x00   // 0x03
+#define OP_STORE 0x08   // 0x23
+#define OP_FENCE 0x03   // 0x0F
+#define OP_SYS   0x1C   // 0x73
