@@ -1,10 +1,10 @@
-
-
 #include "decode.h"
 #include "dispatch.h"
 #include "riscv.h"
+#include <stdint.h>
+#include <stdio.h>
 
-#define OP_IMM 0x04 // 0x13
+#define OP_IMM   0x04   // 0x13 >> 2  = 0x04
 #define OP       0x0C   // 0x33
 #define OP_LUI   0x0D   // 0x37
 #define OP_AUIPC 0x05   // 0x17
@@ -15,3 +15,106 @@
 #define OP_STORE 0x08   // 0x23
 #define OP_FENCE 0x03   // 0x0F
 #define OP_SYS   0x1C   // 0x73
+
+//add immediate 
+static void insn_addi(RISCV *cpu, uint32_t insn){
+  uint32_t rd = RD(insn), rs1 = RS1(insn);
+  int32_t imm = IMM_I(insn);
+  DEBUG(printf("ADDI x%d, x%d, %d\n", rd, rs1, imm));
+
+  if (rd)  cpu->regs[rd] = (int32_t)cpu->regs[rs1] + imm;
+}
+  
+
+// set less than immediate
+static void insn_slti(RISCV *cpu, uint32_t insn){
+  uint32_t rd = RD(insn), rs1 = RS1(insn);
+  int32_t imm = IMM_I(insn);
+  DEBUG(printf("SLTI x%d, x%d, %d\n", rd, rs1, imm));
+  if (rd) cpu->regs[rd] = (int32_t)cpu->regs[rs1] < imm;
+}
+
+//set less than immediate unsigned
+static void insn_sltiu(RISCV *cpu, uint32_t insn){
+  uint32_t rd = RD(insn), rs1 = RS1(insn);
+  uint32_t imm = (uint32_t)IMM_I(insn);
+  DEBUG(printf("SLTIU x%d, x%d, %d\n", rd, rs1, imm));
+  if (rd) cpu->regs[rd] = (int32_t)cpu->regs[rs1] < imm;
+}
+
+// XOR immediate
+static void insn_xori(RISCV *cpu, uint32_t insn) {
+  uint32_t rd = RD(insn), rs1 = RS1(insn);
+  int32_t imm = IMM_I(insn);
+  DEBUG(printf("XORI x%d, x%d, %d\n", rd, rs1, imm));
+  if (rd) cpu->regs[rd] = cpu->regs[rs1] ^ (uint32_t)imm;
+}
+
+// OR immediate
+static void insn_ori(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t imm = IMM_I(insn);
+    DEBUG(printf("ORI x%d, x%d, %d\n", rd, rs1, imm));
+    if (rd) cpu->regs[rd] = cpu->regs[rs1] | (uint32_t)imm;
+}
+
+//AND immediate
+static void insn_andi(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t imm = IMM_I(insn);
+    DEBUG(printf("ANDI x%d, x%d, %d\n", rd, rs1, imm));
+    if (rd) cpu->regs[rd] = cpu->regs[rs1] & (uint32_t)imm;
+}
+
+//shift left logical immediate
+static void insn_slli(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    // shamt is imm[4:0] (bits 24:20)
+    // The upper bits of the immediate (funct7) must be 0x00
+    uint32_t shamt = (insn >> 20) & 0x1F; 
+    uint32_t funct7 = FUNCT7(insn); 
+    if (funct7 != 0x00) {
+        DEBUG(printf("SLLI x%d, x%d, %d\n", rd, rs1, shamt));
+        cpu->is_running = 0; 
+        return;
+    }
+    DEBUG(printf("SLLI x%d, x%d, %u\n", rd, rs1, shamt));
+
+    if (rd != 0) {
+        cpu->regs[rd] = cpu->regs[rs1] << shamt;
+    }
+}
+
+//shift right logical/arithmetic immediate
+static void insn_srli_srai(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    uint32_t shamt = RS2(insn);
+    uint32_t shtyp = FUNCT7(insn);
+    if (shtyp == 0x20) {
+        DEBUG(printf("SRAI x%d, x%d, %d\n", rd, rs1, shamt));
+        if (rd) cpu->regs[rd] = (int32_t)cpu->regs[rs1] >> shamt;
+    } else if (shtyp == 0x00) {
+        DEBUG(printf("SRLI x%d, x%d, %d\n", rd, rs1, shamt));
+        if (rd) cpu->regs[rd] = cpu->regs[rs1] >> shamt;
+    } else {
+        fprintf(stderr, "illegal SRLI/SRAI funct7=0x%x\n", shtyp);
+        cpu->is_running = 0;
+    }
+}
+
+static void handle_op_imm(RISCV *cpu, uint32_t insn) {
+    dispatch_secondary(cpu, insn);
+}
+
+static void handle_add_sub(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    uint32_t funct7 = FUNCT7(insn);
+    if (funct7 == 0x20) {
+        if (rd) cpu->regs[rd] = (int32_t)(cpu->regs[rs1] - cpu->regs[rs2]);
+    } else {
+        if (rd) cpu->regs[rd] = (int32_t)(cpu->regs[rs1] + cpu->regs[rs2]);
+    }
+}
+
+
+
