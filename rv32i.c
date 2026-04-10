@@ -116,16 +116,6 @@ static void insn_add_sub(RISCV *cpu, uint32_t insn) {
     }
 }
 
-static void insn_add_sub(RISCV *cpu, uint32_t insn) {
-    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
-    if (FUNCT7(insn) == 0x20) {
-        DEBUG(printf("SUB x%d, x%d, x%d\n", rd, rs1, rs2));
-        if (rd) cpu->regs[rd] = (int32_t)(cpu->regs[rs1] - cpu->regs[rs2]);
-    } else {
-        DEBUG(printf("ADD x%d, x%d, x%d\n", rd, rs1, rs2));
-        if (rd) cpu->regs[rd] = (int32_t)(cpu->regs[rs1] + cpu->regs[rs2]);
-    }
-}
  
 static void insn_sll(RISCV *cpu, uint32_t insn) {
     uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
