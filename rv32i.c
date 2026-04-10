@@ -106,7 +106,7 @@ static void handle_op_imm(RISCV *cpu, uint32_t insn) {
     dispatch_secondary(cpu, insn);
 }
 
-static void handle_add_sub(RISCV *cpu, uint32_t insn) {
+static void insn_add_sub(RISCV *cpu, uint32_t insn) {
     uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
     uint32_t funct7 = FUNCT7(insn);
     if (funct7 == 0x20) {
@@ -116,5 +116,63 @@ static void handle_add_sub(RISCV *cpu, uint32_t insn) {
     }
 }
 
+static void insn_add_sub(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    if (FUNCT7(insn) == 0x20) {
+        DEBUG(printf("SUB x%d, x%d, x%d\n", rd, rs1, rs2));
+        if (rd) cpu->regs[rd] = (int32_t)(cpu->regs[rs1] - cpu->regs[rs2]);
+    } else {
+        DEBUG(printf("ADD x%d, x%d, x%d\n", rd, rs1, rs2));
+        if (rd) cpu->regs[rd] = (int32_t)(cpu->regs[rs1] + cpu->regs[rs2]);
+    }
+}
+ 
+static void insn_sll(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    DEBUG(printf("SLL x%d, x%d, x%d\n", rd, rs1, rs2));
+    if (rd) cpu->regs[rd] = cpu->regs[rs1] << (cpu->regs[rs2] & 0x1F);
+}
+ 
+static void insn_slt(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    DEBUG(printf("SLT x%d, x%d, x%d\n", rd, rs1, rs2));
+    if (rd) cpu->regs[rd] = (int32_t)cpu->regs[rs1] < (int32_t)cpu->regs[rs2];
+}
+ 
+static void insn_sltu(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    DEBUG(printf("SLTU x%d, x%d, x%d\n", rd, rs1, rs2));
+    if (rd) cpu->regs[rd] = cpu->regs[rs1] < cpu->regs[rs2];
+}
+ 
+static void insn_xor(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    DEBUG(printf("XOR x%d, x%d, x%d\n", rd, rs1, rs2));
+    if (rd) cpu->regs[rd] = cpu->regs[rs1] ^ cpu->regs[rs2];
+}
+ 
+static void insn_srl_sra(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    uint32_t shamt = cpu->regs[rs2] & 0x1F;
+    if (FUNCT7(insn) == 0x20) {
+        DEBUG(printf("SRA x%d, x%d, x%d\n", rd, rs1, rs2));
+        if (rd) cpu->regs[rd] = (int32_t)cpu->regs[rs1] >> shamt;
+    } else {
+        DEBUG(printf("SRL x%d, x%d, x%d\n", rd, rs1, rs2));
+        if (rd) cpu->regs[rd] = cpu->regs[rs1] >> shamt;
+    }
+}
+ 
+static void insn_or(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    DEBUG(printf("OR x%d, x%d, x%d\n", rd, rs1, rs2));
+    if (rd) cpu->regs[rd] = cpu->regs[rs1] | cpu->regs[rs2];
+}
+ 
+static void insn_and(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
+    DEBUG(printf("AND x%d, x%d, x%d\n", rd, rs1, rs2));
+    if (rd) cpu->regs[rd] = cpu->regs[rs1] & cpu->regs[rs2];
+}
 
 
