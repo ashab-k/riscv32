@@ -16,6 +16,8 @@
 #define OP_FENCE 0x03   // 0x0F
 #define OP_SYS   0x1C   // 0x73
 
+// op_imm insn
+
 //add immediate 
 static void insn_addi(RISCV *cpu, uint32_t insn){
   uint32_t rd = RD(insn), rs1 = RS1(insn);
@@ -106,6 +108,9 @@ static void handle_op_imm(RISCV *cpu, uint32_t insn) {
     dispatch_secondary(cpu, insn);
 }
 
+
+// op insn
+
 static void insn_add_sub(RISCV *cpu, uint32_t insn) {
     uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
     uint32_t funct7 = FUNCT7(insn);
@@ -163,6 +168,59 @@ static void insn_and(RISCV *cpu, uint32_t insn) {
     uint32_t rd = RD(insn), rs1 = RS1(insn), rs2 = RS2(insn);
     DEBUG(printf("AND x%d, x%d, x%d\n", rd, rs1, rs2));
     if (rd) cpu->regs[rd] = cpu->regs[rs1] & cpu->regs[rs2];
+}
+
+static void handle_op(RISCV *cpu, uint32_t insn) {
+    dispatch_secondary(cpu, insn);
+}
+
+
+//load unsigned immediate
+static void handle_lui(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn);
+    uint32_t imm = IMM_U(insn);
+    DEBUG(printf("LUI x%d, 0x%x\n", rd, imm));
+    if (rd) cpu->regs[rd] = imm;
+}
+ 
+static void handle_auipc(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn);
+    uint32_t imm = IMM_U(insn);
+    DEBUG(printf("AUIPC x%d, 0x%x\n", rd, imm));
+    if (rd) cpu->regs[rd] = cpu->pc + imm;
+}
+
+//jump and link
+static void handle_jal(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn);
+    int32_t offset = IMM_J(insn);
+    uint32_t addr = cpu->pc + (uint32_t)offset;
+    DEBUG(printf("JAL x%d, pc%+d\n", rd, offset));
+    if (addr & 3) {
+        fprintf(stderr, "misaligned JAL target 0x%x\n", addr);
+        cpu->is_running = 0; return;
+    }
+    if (rd) cpu->regs[rd] = cpu->next_pc;
+    cpu->next_pc = addr;
+}
+
+
+//jump and link register 
+static void handle_jalr(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t offset = IMM_I(insn);
+    if (FUNCT3(insn) != 0x0) {
+        fprintf(stderr, "illegal JALR funct3=0x%x\n", FUNCT3(insn));
+        cpu->is_running = 0; return;
+    }
+    uint32_t addr = ((uint32_t)((int32_t)cpu->regs[rs1] + offset)) & ~1u;
+    DEBUG(printf("JALR x%d, x%d%+d\n", rd, rs1, offset));
+    if (addr & 3) {
+        fprintf(stderr, "misaligned JALR target 0x%x\n", addr);
+        cpu->is_running = 0; return;
+    }
+    if (rd) cpu->regs[rd] = cpu->next_pc;
+    cpu->next_pc = addr;
 }
 
 
