@@ -23,4 +23,4 @@
 
 #define IMM_U(insn)    ((insn) & 0xFFFFF000)
 
-#define IMM_J(insn)    SEXT((((insn) >> 21) & 0x3FF) | ((((insn) >> 20) & 0x1) << 10) | ((((insn) >> 12) & 0xFF) << 11) | ((((insn) >> 31) & 0x1) << 19), 20) << 1
+#define IMM_J(insn) (SEXT((((insn)>>21)&0x3FF) | ((((insn)>>20)&0x1)<<10) | ((((insn)>>12)&0xFF)<<11) | ((((insn)>>31)&0x1)<<19), 20) << 1)
