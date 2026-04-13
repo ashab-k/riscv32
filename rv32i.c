@@ -224,3 +224,59 @@ static void handle_jalr(RISCV *cpu, uint32_t insn) {
 }
 
 
+//branch instructions 
+
+//branch if equal
+static void insn_beq(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_B(insn);
+    DEBUG(printf("BEQ x%d, x%d, pc%+d\n", rs1, rs2, offset));
+    if (cpu->regs[rs1] == cpu->regs[rs2]) cpu->next_pc = cpu->pc + offset;
+}
+ 
+//branch if not equal
+static void insn_bne(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_B(insn);
+    DEBUG(printf("BNE x%d, x%d, pc%+d\n", rs1, rs2, offset));
+    if (cpu->regs[rs1] != cpu->regs[rs2]) cpu->next_pc = cpu->pc + offset;
+}
+
+//branch if less than 
+static void insn_blt(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_B(insn);
+    DEBUG(printf("BLT x%d, x%d, pc%+d\n", rs1, rs2, offset));
+    if ((int32_t)cpu->regs[rs1] < (int32_t)cpu->regs[rs2]) cpu->next_pc = cpu->pc + offset;
+}
+ 
+//branch if greaterthan or equal
+static void insn_bge(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_B(insn);
+    DEBUG(printf("BGE x%d, x%d, pc%+d\n", rs1, rs2, offset));
+    if ((int32_t)cpu->regs[rs1] >= (int32_t)cpu->regs[rs2]) cpu->next_pc = cpu->pc + offset;
+}
+ 
+//branch if less than unsigned
+static void insn_bltu(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_B(insn);
+    DEBUG(printf("BLTU x%d, x%d, pc%+d\n", rs1, rs2, offset));
+    if (cpu->regs[rs1] < cpu->regs[rs2]) cpu->next_pc = cpu->pc + offset;
+}
+ 
+// branch if greaterthan or equal unsigned
+static void insn_bgeu(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_B(insn);
+    DEBUG(printf("BGEU x%d, x%d, pc%+d\n", rs1, rs2, offset));
+    if (cpu->regs[rs1] >= cpu->regs[rs2]) cpu->next_pc = cpu->pc + offset;
+}
+
+
+static void handle_branch(RISCV *cpu, uint32_t insn) {
+    dispatch_secondary(cpu, insn);
+}
+
+ 
