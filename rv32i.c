@@ -20,7 +20,7 @@
 
 //add immediate 
 static void insn_addi(RISCV *cpu, uint32_t insn){
-  uint32_t rd = RD(insn), rs1 = RS1(insn);
+ uint32_t rd = RD(insn), rs1 = RS1(insn);
   int32_t imm = IMM_I(insn);
   DEBUG(printf("ADDI x%d, x%d, %d\n", rd, rs1, imm));
 
@@ -279,4 +279,136 @@ static void handle_branch(RISCV *cpu, uint32_t insn) {
     dispatch_secondary(cpu, insn);
 }
 
+//loads
+//load byte
+static void insn_lb(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t offset = IMM_I(insn);
+    uint8_t val;
+    DEBUG(printf("LB x%d, x%d%+d\n", rd, rs1, offset));
+    if (riscv_read_u8(cpu, cpu->regs[rs1] + offset, &val)) return;
+    if (rd) cpu->regs[rd] = (int32_t)(int8_t)val;
+}
  
+//load halfword 
+static void insn_lh(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t offset = IMM_I(insn);
+    uint16_t val;
+    DEBUG(printf("LH x%d, x%d%+d\n", rd, rs1, offset));
+    if (riscv_read_u16(cpu, cpu->regs[rs1] + offset, &val)) return;
+    if (rd) cpu->regs[rd] = (int32_t)(int16_t)val;
+}
+ 
+//load word
+static void insn_lw(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t offset = IMM_I(insn);
+    uint32_t val;
+    DEBUG(printf("LW x%d, x%d%+d\n", rd, rs1, offset));
+    if (riscv_read_u32(cpu, cpu->regs[rs1] + offset, &val)) return;
+    if (rd) cpu->regs[rd] = val;
+}
+
+//load byte unsigned  
+static void insn_lbu(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t offset = IMM_I(insn);
+    uint8_t val;
+    DEBUG(printf("LBU x%d, x%d%+d\n", rd, rs1, offset));
+    if (riscv_read_u8(cpu, cpu->regs[rs1] + offset, &val)) return;
+    if (rd) cpu->regs[rd] = (uint32_t)val;
+}
+
+//load halfword unsigned 
+static void insn_lhu(RISCV *cpu, uint32_t insn) {
+    uint32_t rd = RD(insn), rs1 = RS1(insn);
+    int32_t offset = IMM_I(insn);
+    uint16_t val;
+    DEBUG(printf("LHU x%d, x%d%+d\n", rd, rs1, offset));
+    if (riscv_read_u16(cpu, cpu->regs[rs1] + offset, &val)) return;
+    if (rd) cpu->regs[rd] = (uint32_t)val;
+}
+ 
+static void handle_load(RISCV *cpu, uint32_t insn) {
+    dispatch_secondary(cpu, insn);
+} 
+
+
+//stores
+
+//store byte
+static void insn_sb(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_S(insn);
+    DEBUG(printf("SB x%d, x%d%+d\n", rs2, rs1, offset));
+    riscv_write_u8(cpu, cpu->regs[rs1] + offset, cpu->regs[rs2] & 0xFF);
+}
+ 
+//store halfword
+static void insn_sh(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_S(insn);
+    DEBUG(printf("SH x%d, x%d%+d\n", rs2, rs1, offset));
+    riscv_write_u16(cpu, cpu->regs[rs1] + offset, cpu->regs[rs2] & 0xFFFF);
+}
+
+//store word 
+static void insn_sw(RISCV *cpu, uint32_t insn) {
+    uint32_t rs1 = RS1(insn), rs2 = RS2(insn);
+    int32_t offset = IMM_S(insn);
+    DEBUG(printf("SW x%d, x%d%+d\n", rs2, rs1, offset));
+    riscv_write_u32(cpu, cpu->regs[rs1] + offset, cpu->regs[rs2]);
+}
+ 
+static void handle_store(RISCV *cpu, uint32_t insn) {
+    dispatch_secondary(cpu, insn);
+}
+
+
+//fence
+static void handle_fence(RISCV *cpu, uint32_t insn) {
+    (void)cpu; (void)insn;
+    DEBUG(printf("FENCE (nop)\n"));
+}
+
+
+//TODO: needs to handle syscalls properly 
+static void handle_ecall(RISCV *cpu, uint32_t insn) {
+    (void)insn;
+    DEBUG(printf("ECALL\n"));
+    if (cpu->regs[3] & 1) {
+        printf("program exited with code %d\n", cpu->regs[3] >> 1);
+        cpu->is_running = 0;
+    }
+}
+ 
+static void handle_ebreak(RISCV *cpu, uint32_t insn) {
+    (void)insn;
+    DEBUG(printf("EBREAK\n"));
+    cpu->is_running = 0;
+}
+ 
+static void handle_priv(RISCV *cpu, uint32_t insn) {
+    if (RD(insn) != 0 || RS1(insn) != 0) {
+        fprintf(stderr, "illegal SYSTEM insn at pc=0x%x\n", cpu->pc);
+        cpu->is_running = 0; return;
+    }
+    uint32_t funct12 = (insn >> 20) & 0xFFF;
+    switch (funct12) {
+    case 0x000: handle_ecall(cpu, insn);  break;
+    case 0x001: handle_ebreak(cpu, insn); break;
+    default:
+        fprintf(stderr, "unknown SYSTEM funct12=0x%x at pc=0x%x\n", funct12, cpu->pc);
+        cpu->is_running = 0;
+    }
+}
+ 
+static void handle_system(RISCV *cpu, uint32_t insn) {
+    if (FUNCT3(insn) == 0x0)
+        handle_priv(cpu, insn);
+    else
+        dispatch_secondary(cpu, insn); // CSR slots filled by zicsr_init()
+}
+
+
