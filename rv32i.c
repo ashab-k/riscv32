@@ -373,16 +373,39 @@ static void handle_fence(RISCV *cpu, uint32_t insn) {
 }
 
 
-//TODO: needs to handle syscalls properly 
+//system insn
+
 static void handle_ecall(RISCV *cpu, uint32_t insn) {
     (void)insn;
-    DEBUG(printf("ECALL\n"));
-    if (cpu->regs[3] & 1) {
-        printf("program exited with code %d\n", cpu->regs[3] >> 1);
+    uint32_t syscall_num = cpu->regs[17]; // a7
+    uint32_t a0 = cpu->regs[10];
+    uint32_t a1 = cpu->regs[11];
+    uint32_t a2 = cpu->regs[12];
+
+    switch (syscall_num) {
+    case 64: { // write(fd, buf, len)
+        for (uint32_t i = 0; i < a2; i++) {
+            uint8_t byte;
+            if (riscv_read_u8(cpu, a1 + i, &byte)) break;
+            fputc(byte, a0 == 2 ? stderr : stdout);
+        }
+        cpu->regs[10] = a2; // return value = bytes written
+        break;
+    }
+    case 93:  // exit(code)
+        printf("program exited with code %d\n", a0);
         cpu->is_running = 0;
+        break;
+    case 214: // brk(addr)        
+        cpu->regs[10] = a0;
+        break;
+    default:
+        fprintf(stderr, "unhandled syscall %d at pc=0x%x\n", syscall_num, cpu->pc);
+        cpu->regs[10] = -1;
+        break;
     }
 }
- 
+
 static void handle_ebreak(RISCV *cpu, uint32_t insn) {
     (void)insn;
     DEBUG(printf("EBREAK\n"));
@@ -411,4 +434,57 @@ static void handle_system(RISCV *cpu, uint32_t insn) {
         dispatch_secondary(cpu, insn); // CSR slots filled by zicsr_init()
 }
 
-
+void rv32i_init(void) {
+    // primary table
+    register_primary(0x04, handle_op_imm); // 0x13 OP-IMM
+    register_primary(0x0C, handle_op);     // 0x33 OP
+    register_primary(0x0D, handle_lui);    // 0x37 LUI
+    register_primary(0x05, handle_auipc);  // 0x17 AUIPC
+    register_primary(0x1B, handle_jal);    // 0x6F JAL
+    register_primary(0x19, handle_jalr);   // 0x67 JALR
+    register_primary(0x18, handle_branch); // 0x63 BRANCH
+    register_primary(0x00, handle_load);   // 0x03 LOAD
+    register_primary(0x08, handle_store);  // 0x23 STORE
+    register_primary(0x03, handle_fence);  // 0x0F FENCE
+    register_primary(0x1C, handle_system); // 0x73 SYSTEM
+ 
+    // OP-IMM funct3
+    register_secondary(0x04, 0x0, insn_addi);
+    register_secondary(0x04, 0x2, insn_slti);
+    register_secondary(0x04, 0x3, insn_sltiu);
+    register_secondary(0x04, 0x4, insn_xori);
+    register_secondary(0x04, 0x6, insn_ori);
+    register_secondary(0x04, 0x7, insn_andi);
+    register_secondary(0x04, 0x1, insn_slli);
+    register_secondary(0x04, 0x5, insn_srli_srai);
+ 
+    // OP funct3
+    register_secondary(0x0C, 0x0, insn_add_sub);
+    register_secondary(0x0C, 0x1, insn_sll);
+    register_secondary(0x0C, 0x2, insn_slt);
+    register_secondary(0x0C, 0x3, insn_sltu);
+    register_secondary(0x0C, 0x4, insn_xor);
+    register_secondary(0x0C, 0x5, insn_srl_sra);
+    register_secondary(0x0C, 0x6, insn_or);
+    register_secondary(0x0C, 0x7, insn_and);
+ 
+    // BRANCH funct3
+    register_secondary(0x18, 0x0, insn_beq);
+    register_secondary(0x18, 0x1, insn_bne);
+    register_secondary(0x18, 0x4, insn_blt);
+    register_secondary(0x18, 0x5, insn_bge);
+    register_secondary(0x18, 0x6, insn_bltu);
+    register_secondary(0x18, 0x7, insn_bgeu);
+ 
+    // LOAD funct3
+    register_secondary(0x00, 0x0, insn_lb);
+    register_secondary(0x00, 0x1, insn_lh);
+    register_secondary(0x00, 0x2, insn_lw);
+    register_secondary(0x00, 0x4, insn_lbu);
+    register_secondary(0x00, 0x5, insn_lhu);
+ 
+    // STORE funct3
+    register_secondary(0x08, 0x0, insn_sb);
+    register_secondary(0x08, 0x1, insn_sh);
+    register_secondary(0x08, 0x2, insn_sw);
+}
