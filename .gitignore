@@ -17,7 +17,7 @@
 *.gdb_history
 
 # Build directories
-build/
+/build/
 /bin/
 /obj/
 
