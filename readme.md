@@ -18,7 +18,7 @@ Expects a flat raw binary. To produce one from an assembly file:
  
 ```bash
 riscv64-unknown-elf-as -march=rv32i -mabi=ilp32 program.s -o program.o
-riscv64-unknown-elf-ld -m elf32lriscv -Ttext=0x80000000 program.o -o program.elf
+riscv64-unknown-elf-ld -m elf32lriscv -T link.ld program.o -o program.elf
 riscv64-unknown-elf-objcopy -O binary program.elf program.bin
 ```
  
