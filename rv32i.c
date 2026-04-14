@@ -396,7 +396,7 @@ static void handle_ecall(RISCV *cpu, uint32_t insn) {
         printf("program exited with code %d\n", a0);
         cpu->is_running = 0;
         break;
-    case 214: // brk(addr)        
+    case 214: // brk(addr)
         cpu->regs[10] = a0;
         break;
     default:
