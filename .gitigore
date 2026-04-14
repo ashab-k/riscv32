@@ -5,7 +5,8 @@
 *.out
 *.exe
 *.app
-
+*.bin
+*.elf
 # Static and shared libraries
 *.a
 *.so
@@ -16,7 +17,7 @@
 *.gdb_history
 
 # Build directories
-/build/
+build/
 /bin/
 /obj/
 
