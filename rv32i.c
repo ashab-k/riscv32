@@ -26,7 +26,6 @@ static void insn_addi(RISCV *cpu, uint32_t insn){
 
   if (rd)  cpu->regs[rd] = (int32_t)cpu->regs[rs1] + imm;
 }
-  
 
 // set less than immediate
 static void insn_slti(RISCV *cpu, uint32_t insn){
@@ -175,14 +174,15 @@ static void handle_op(RISCV *cpu, uint32_t insn) {
 }
 
 
-//load unsigned immediate
+//load upper immediate
 static void handle_lui(RISCV *cpu, uint32_t insn) {
     uint32_t rd = RD(insn);
     uint32_t imm = IMM_U(insn);
     DEBUG(printf("LUI x%d, 0x%x\n", rd, imm));
     if (rd) cpu->regs[rd] = imm;
 }
- 
+
+//add upper immediate to program counter 
 static void handle_auipc(RISCV *cpu, uint32_t insn) {
     uint32_t rd = RD(insn);
     uint32_t imm = IMM_U(insn);
